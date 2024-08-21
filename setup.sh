@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
-sudo rm -R _builddir && \
-meson setup _builddir && \
-sh run.sh 
+set -exo pipefail
+
+if [ test -d _builddir ]; then
+    rm -R _builddir
+fi
+
+meson setup _builddir
