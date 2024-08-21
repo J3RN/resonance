@@ -48,16 +48,24 @@ On a recent enough Ubuntu or Debian unstable you can do the following:
 ```
 sudo apt install build-essential rustc meson ninja-build git python3-loguru python3-mutagen python3-tqdm libgtk-4-dev libadwaita-1-dev \
 libgstreamer-plugins-bad1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev
-git clone https://github.com/nate-xyz/resonance && cd resonance
-ninja -C build && sudo ninja -C build install
-
 ```
-To uninstall run ```sudo ninja -C build uninstall```.
 
 For Fedora, run:
 ```
 sudo dnf install cmake rust meson ninja-build gtk4-devel libadwaita-devel gstreamer1-devel gstreamer1-plugins-bad-free-devel
 ```
+
+To setup your build environment, run:
+```
+./setup.sh
+```
+
+To build and run the application, run:
+```
+./run.sh
+```
+
+To uninstall run `sudo ninja -C build uninstall`.
 
 ## Arch Linux
 Initial script provided for 0.1.3.
