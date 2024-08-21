@@ -54,6 +54,11 @@ ninja -C build && sudo ninja -C build install
 ```
 To uninstall run ```sudo ninja -C build uninstall```.
 
+For Fedora, run:
+```
+sudo dnf install cmake rust meson ninja-build gtk4-devel libadwaita-devel gstreamer1-devel gstreamer1-plugins-bad-free-devel
+```
+
 ## Arch Linux
 Initial script provided for 0.1.3.
 
