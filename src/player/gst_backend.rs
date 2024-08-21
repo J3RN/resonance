@@ -2,22 +2,22 @@
  *
  * SPDX-FileCopyrightText: 2023 nate-xyz
  * SPDX-License-Identifier: GPL-3.0-or-later
- * 
+ *
  * Rust rewrite of gstplayer.py from GNOME Music (GPLv2)
  * used my own python rewrite of gnome music gstplayer, Noteworthy rewrite, amberol gst backend for reference
  * See https://gitlab.gnome.org/GNOME/gnome-music/-/blob/master/gnomemusic/gstplayer.py
  * See https://github.com/SeaDve/Noteworthy/blob/main/src/core/audio_player.rs
  * See https://gitlab.gnome.org/World/amberol/-/blob/main/src/audio/gst_backend.rs
- * 
+ *
  */
 
-use gtk::{glib, glib::clone, glib::Sender};
 use gst::{glib::Continue, prelude::*};
+use gtk::{glib, glib::clone, glib::Sender};
 use gtk_macros::send;
 
-use std::{cell::Cell, cell::RefCell, rc::Rc};
-use std::time::Duration;
 use log::{debug, error};
+use std::time::Duration;
+use std::{cell::Cell, cell::RefCell, rc::Rc};
 
 use super::player::PlaybackAction;
 
@@ -46,7 +46,6 @@ pub struct GstPlayer {
     // pub tick: Cell<u64>,
     pub duration: RefCell<Option<f64>>,
     pub volume: Cell<f64>,
-
 }
 
 impl GstPlayer {
@@ -55,7 +54,7 @@ impl GstPlayer {
             .unwrap()
             .downcast::<gst::Pipeline>()
             .unwrap();
-        
+
         let gstplayer = Rc::new(Self {
             sender: player_sender,
             pipeline,
@@ -65,7 +64,6 @@ impl GstPlayer {
             // tick: Cell::new(0),
             duration: RefCell::new(None),
             volume: Cell::new(0.0),
-
         });
 
         gstplayer.clone().connect_bus();
@@ -75,7 +73,6 @@ impl GstPlayer {
     pub fn pipeline(&self) -> &gst::Pipeline {
         &self.pipeline
     }
-
 
     // STATE
     pub fn set_state(&self, state: BackendPlaybackState) {
@@ -90,7 +87,10 @@ impl GstPlayer {
         }
     }
 
-    pub fn set_pipeline_gst_state(&self, state: BackendPlaybackState) -> Result<(), gst::StateChangeError> {
+    pub fn set_pipeline_gst_state(
+        &self,
+        state: BackendPlaybackState,
+    ) -> Result<(), gst::StateChangeError> {
         match state {
             BackendPlaybackState::Paused => {
                 self.pipeline.set_state(gst::State::Paused)?;
@@ -120,7 +120,8 @@ impl GstPlayer {
     pub fn set_uri(&self, uri: String) {
         let uri_encoded = urlencoding::encode(&uri);
         let replaced = uri_encoded.replace("%2F", "/");
-        self.pipeline.set_property("uri", format!("file:{}", replaced).to_value());
+        self.pipeline
+            .set_property("uri", format!("file:{}", replaced).to_value());
     }
 
     //VOLUME
@@ -129,20 +130,21 @@ impl GstPlayer {
         if set_volume <= 0.05 {
             set_volume = 0.0;
         }
-        
+
         let linear_volume = gst_audio::StreamVolume::convert_volume(
             gst_audio::StreamVolumeFormat::Cubic,
             gst_audio::StreamVolumeFormat::Linear,
             set_volume,
         );
-        self.pipeline.set_property_from_value("volume", &linear_volume.to_value());
+        self.pipeline
+            .set_property_from_value("volume", &linear_volume.to_value());
         self.volume.set(linear_volume);
     }
 
     fn set_volume_internal(&self) {
-        self.pipeline.set_property_from_value("volume", &self.volume.get().to_value());
+        self.pipeline
+            .set_property_from_value("volume", &self.volume.get().to_value());
     }
-
 
     pub fn volume(&self) -> f64 {
         self.pipeline.property("volume")
@@ -163,14 +165,9 @@ impl GstPlayer {
         }
         .and_then(|pos| pos.try_into().ok())?;
         match pos {
-            Some(d) => {
-                Some(d.nseconds()) 
-            },
-            None => {
-                None
-            }
+            Some(d) => Some(d.nseconds()),
+            None => None,
         }
-
     }
 
     pub fn pipeline_position(&self) -> Option<u64> {
@@ -187,14 +184,9 @@ impl GstPlayer {
         }
         .and_then(|pos| pos.try_into().ok())?;
         match pos {
-            Some(d) => {
-                Some(d.seconds()) 
-            },
-            None => {
-                None
-            }
+            Some(d) => Some(d.seconds()),
+            None => None,
         }
-
     }
 
     //DURATION
@@ -212,12 +204,8 @@ impl GstPlayer {
         }
         .and_then(|dur| dur.try_into().ok())?;
         match dur {
-            Some(d) => {
-                Some(d.seconds() as f64) 
-            },
-            None => {
-                None
-            }
+            Some(d) => Some(d.seconds() as f64),
+            None => None,
         }
     }
 
@@ -226,12 +214,12 @@ impl GstPlayer {
             Some(duration) => {
                 self.duration.replace(Some(duration));
                 glib::Continue(false)
-            },
+            }
             None => {
                 self.duration.replace(None);
                 glib::Continue(true)
             }
-        } 
+        }
     }
 
     pub fn duration(&self) -> Option<f64> {
@@ -270,7 +258,8 @@ impl GstPlayer {
     fn on_stream_start(self: Rc<Self>) {
         //debug!("BACKEND on_stream_start");
         let timeout_duration = Duration::from_millis(1);
-        let _source_id = glib::timeout_add_local(timeout_duration,
+        let _source_id = glib::timeout_add_local(
+            timeout_duration,
             clone!(@strong self as this => @default-return Continue(false) , move || {
                 this.query_duration()
             }),
@@ -285,25 +274,29 @@ impl GstPlayer {
         let clock = self.clock.borrow();
         match clock.as_ref() {
             Some(clock) => {
-                let clock_id = clock.new_periodic_id(clock.time().unwrap(), gst::ClockTime::from_seconds(1));
-                
+                let clock_id =
+                    clock.new_periodic_id(clock.time().unwrap(), gst::ClockTime::from_seconds(1));
+
                 self.clock_id.replace(Some(clock_id));
 
                 //let player_sender = Rc::new(self.player_sender.borrow().as_ref().unwrap());
-                self.clock_id.borrow().as_ref().unwrap().wait_async(
-                    clone!(@strong self.sender as sender => move |_clock, time, _id| {
-                        if let Some(time) = time {
-                            let sec = time.seconds();
-                            match sender.send(PlaybackAction::Tick(sec)) {
-                                Ok(()) => (),
-                                Err(err) => error!("{}", err)
+                self.clock_id
+                    .borrow()
+                    .as_ref()
+                    .unwrap()
+                    .wait_async(
+                        clone!(@strong self.sender as sender => move |_clock, time, _id| {
+                            if let Some(time) = time {
+                                let sec = time.seconds();
+                                match sender.send(PlaybackAction::Tick(sec)) {
+                                    Ok(()) => (),
+                                    Err(err) => error!("{}", err)
+                                }
+                                //send!(sender, PlaybackAction::Tick(time.seconds()));
                             }
-                            //send!(sender, PlaybackAction::Tick(time.seconds()));
-                        }          
-                    }),
-                ).expect("Failed to wait async");
-
-                
+                        }),
+                    )
+                    .expect("Failed to wait async");
             }
             None => {
                 return;
@@ -311,12 +304,15 @@ impl GstPlayer {
         }
     }
 
-
     fn on_bus_error(&self, message: &gst::message::Error) {
         let error = message.error();
         let debug = message.debug();
 
-        error!("Error from element `{}`: {:?}", message.src().unwrap().name(), error);
+        error!(
+            "Error from element `{}`: {:?}",
+            message.src().unwrap().name(),
+            error
+        );
 
         if let Some(debug) = debug {
             debug!("Debug info: {}", debug);
@@ -342,7 +338,11 @@ impl GstPlayer {
 
         let gst_state = message.current();
 
-        debug!("BACKEND gst state changed: `{:?}` -> `{:?}`", message.old(), gst_state);
+        debug!(
+            "BACKEND gst state changed: `{:?}` -> `{:?}`",
+            message.old(),
+            gst_state
+        );
 
         let backend_state = match gst_state {
             gst::State::Null => BackendPlaybackState::Stopped,
@@ -362,17 +362,20 @@ impl GstPlayer {
             //debug!("RESET VOLUME {:?}, {:?}", self.volume.get(), self.volume());
             self.set_volume_internal();
             //self.set_volume(self.volume.get())
-        }        
+        }
     }
 
     pub fn seek(&self, seconds: u64) {
         //self._seek = self.pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, seconds * Gst.SECOND)
 
-        match self.pipeline.seek_simple(gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT, seconds * gst::ClockTime::SECOND) {
+        match self.pipeline.seek_simple(
+            gst::SeekFlags::FLUSH | gst::SeekFlags::KEY_UNIT,
+            seconds * gst::ClockTime::SECOND,
+        ) {
             Ok(_) => {
                 debug!("seek success");
-            },
-            Err(_) => ()
+            }
+            Err(_) => (),
         }
     }
 }
